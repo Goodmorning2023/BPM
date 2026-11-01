@@ -1,0 +1,67 @@
+name: Build Android APK
+
+# 在 GitHub 上自动构建 debug APK，不需要本地安装 JDK / Android SDK。
+# 产物在 Actions 运行页面的 Artifacts 里下载：metronome-debug-apk
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      # Capacitor 6 要求 JDK 17
+      - uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Install dependencies
+        working-directory: android-app
+        run: npm install --no-audit --no-fund
+
+      - name: Copy web assets into the shell
+        run: |
+          rm -rf android-app/www
+          mkdir -p android-app/www
+          cp -r dist/. android-app/www/
+
+      - name: Generate Android project
+        working-directory: android-app
+        run: npx cap add android
+
+      - name: Apply launcher icons
+        run: |
+          for d in mdpi hdpi xhdpi xxhdpi xxxhdpi; do
+            cp "android-app/icon/mipmap-$d/ic_launcher.png" \
+               "android-app/android/app/src/main/res/mipmap-$d/ic_launcher.png"
+            cp "android-app/icon/mipmap-$d/ic_launcher_round.png" \
+               "android-app/android/app/src/main/res/mipmap-$d/ic_launcher_round.png"
+          done
+          # 删掉自适应图标 XML：否则 API 26+ 会优先用它，上一步的 PNG 就不生效
+          rm -rf android-app/android/app/src/main/res/mipmap-anydpi-v26
+
+      - name: Sync web assets
+        working-directory: android-app
+        run: npx cap sync android
+
+      - name: Build debug APK
+        working-directory: android-app/android
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleDebug --no-daemon --stacktrace
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: metronome-debug-apk
+          path: android-app/android/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
