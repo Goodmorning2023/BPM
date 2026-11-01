@@ -1,0 +1,11 @@
+{
+  "appId": "com.metronome.pwa",
+  "appName": "自由节拍器",
+  "webDir": "www",
+  "server": {
+    "androidScheme": "https"
+  },
+  "android": {
+    "allowMixedContent": false
+  }
+}

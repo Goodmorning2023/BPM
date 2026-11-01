@@ -1,0 +1,19 @@
+{
+  "name": "自由节拍器",
+  "short_name": "自由节拍器",
+  "description": "按拍自由编排节奏的节拍器：每拍可设不同格数，支持休止符、三连音、前八后十六等，内置精准音频时钟。",
+  "lang": "zh-CN",
+  "start_url": "./index.html",
+  "scope": "./",
+  "id": "metronome-pwa",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#0b0e12",
+  "theme_color": "#0b0e12",
+  "categories": ["music", "utilities", "productivity"],
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

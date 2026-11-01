@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="theme-color" content="#0a0d12">
+<meta name="description" content="按拍自由编排节奏的节拍器：每拍可设不同格数，支持休止符、三连音、前八后十六等。">
+<title>自由节拍器</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon-192.png" sizes="192x192">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="自由节拍器">
+<script>
+/* 首屏前定好主题，避免闪白/闪黑 */
+(function () {
+  try {
+    var raw = localStorage.getItem('metronome.settings.v3');
+    var mode = (raw && JSON.parse(raw).theme) || 'auto';
+    var dark = mode === 'dark' ||
+      (mode === 'auto' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+    document.documentElement.dataset.theme = dark ? 'dark' : 'light';
+  } catch (e) {
+    document.documentElement.dataset.theme = 'dark';
+  }
+})();
+</script>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div class="app">
+
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-dot"></span>
+      <h1>自由节拍器</h1>
+    </div>
+    <div class="topbar-actions">
+      <button id="themeBtn" class="icon-btn" aria-label="切换主题">
+        <svg class="ico-sun" viewBox="0 0 24 24" width="21" height="21" aria-hidden="true">
+          <circle fill="none" stroke="currentColor" stroke-width="1.7" cx="12" cy="12" r="4.2"/>
+          <path fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"
+                d="M12 2.4v2.2M12 19.4v2.2M2.4 12h2.2M19.4 12h2.2M5.4 5.4l1.5 1.5M17.1 17.1l1.5 1.5M18.6 5.4l-1.5 1.5M6.9 17.1l-1.5 1.5"/>
+        </svg>
+        <svg class="ico-moon" viewBox="0 0 24 24" width="21" height="21" aria-hidden="true">
+          <path fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"
+                d="M20.6 14.7A8.7 8.7 0 0 1 9.3 3.4a8.7 8.7 0 1 0 11.3 11.3Z"/>
+        </svg>
+      </button>
+      <button id="panelBtn" class="icon-btn" aria-label="设置" aria-expanded="false" aria-controls="panel">
+        <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
+          <path fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"
+                d="M3.6 8h6.2M15.4 8h5M3.6 16h3.4M12.6 16h7.8"/>
+          <circle fill="none" stroke="currentColor" stroke-width="1.7" cx="12" cy="8" r="2.4"/>
+          <circle fill="none" stroke="currentColor" stroke-width="1.7" cx="9.4" cy="16" r="2.4"/>
+        </svg>
+      </button>
+    </div>
+  </header>
+
+  <main class="stage">
+
+    <div class="hero">
+      <section class="bpm-block" aria-labelledby="bpmLabel">
+        <h2 id="bpmLabel" class="sr-only">每分钟拍数</h2>
+        <div class="bpm-row">
+          <button id="bpmDown" class="step-btn" aria-label="减慢 1 BPM">−</button>
+          <div class="bpm-readout">
+            <output id="bpmValue" class="bpm-value" aria-live="off">120</output>
+          </div>
+          <button id="bpmUp" class="step-btn" aria-label="加快 1 BPM">+</button>
+        </div>
+
+        <div class="bpm-meta">
+          <span class="bpm-unit">BPM</span>
+          <span class="meta-sep" aria-hidden="true"></span>
+          <span id="tempoMark" class="tempo-mark">Allegro</span>
+        </div>
+
+        <div class="slider-wrap">
+          <input id="bpmSlider" class="range" type="range" min="30" max="300" step="1" value="120"
+                 aria-label="速度" aria-describedby="tempoMark">
+          <div class="slider-scale"><span>30</span><span>300</span></div>
+        </div>
+      </section>
+
+      <section class="pulse-block">
+        <div id="beats" class="pulse" role="group" aria-label="拍点指示"></div>
+        <div id="patternSummary" class="pattern-summary">每小节 4 拍 · 共 4 格</div>
+      </section>
+    </div>
+
+    <section class="transport">
+      <button id="tapBtn" class="pill-btn" aria-keyshortcuts="T">TAP</button>
+      <button id="playBtn" class="play-btn" aria-label="开始" aria-pressed="false">
+        <svg class="ico-play" viewBox="0 0 24 24" width="34" height="34" aria-hidden="true">
+          <path fill="currentColor" d="M8 5.2v13.6c0 .8.87 1.3 1.56.9l10.3-6.8a1.06 1.06 0 0 0 0-1.8L9.56 4.3A1.06 1.06 0 0 0 8 5.2Z"/>
+        </svg>
+        <svg class="ico-stop" viewBox="0 0 24 24" width="34" height="34" aria-hidden="true">
+          <rect fill="currentColor" x="7" y="7" width="10" height="10" rx="2"/>
+        </svg>
+      </button>
+      <button id="muteBtn" class="pill-btn" aria-label="静音" aria-pressed="false" aria-keyshortcuts="M">
+        <svg class="ico-sound" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+          <path fill="currentColor" d="M4 9.5h3.2L12 5.4v13.2L7.2 14.5H4a1 1 0 0 1-1-1v-4a1 1 0 0 1 1-1Z"/>
+          <path fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" d="M15.5 9a4 4 0 0 1 0 6M18 6.6a7.4 7.4 0 0 1 0 10.8"/>
+        </svg>
+        <svg class="ico-muted" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+          <path fill="currentColor" d="M4 9.5h3.2L12 5.4v13.2L7.2 14.5H4a1 1 0 0 1-1-1v-4a1 1 0 0 1 1-1Z" opacity=".45"/>
+          <path fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" d="m15.5 9.5 5 5m0-5-5 5"/>
+        </svg>
+      </button>
+    </section>
+
+    <div class="hint-row">
+      <span class="kbd-hint"><kbd>Space</kbd> 开始/停止</span>
+      <span class="kbd-hint"><kbd>T</kbd> 点击取速</span>
+      <span class="kbd-hint"><kbd>↑</kbd><kbd>↓</kbd> 微调</span>
+    </div>
+  </main>
+
+  <section id="panel" class="panel" hidden aria-label="设置">
+
+    <!-- 节奏型编辑器 -->
+    <div class="panel-block">
+      <div class="field-head">
+        <span class="block-title">节奏型</span>
+        <output id="patternInfo" class="mono">—</output>
+      </div>
+
+      <div class="field">
+        <div class="field-head"><span>每小节拍数</span><output id="beatsOut">4</output></div>
+        <div class="seg" id="beatsSeg" role="group" aria-label="每小节拍数"></div>
+      </div>
+
+      <div class="field">
+        <div class="field-head">
+          <span>节奏型 · 应用到 <b id="selectedBeatLabel" class="sel-beat">第 1 拍</b></span>
+          <button id="copyAllBtn" class="mini-btn" type="button">复制到所有拍</button>
+        </div>
+        <div class="presets" id="presetRow" role="group" aria-label="节奏型"></div>
+      </div>
+
+      <div class="grid-editor" id="grid" role="group" aria-label="节奏格编辑器"></div>
+
+      <div class="legend">
+        <span class="legend-item"><i class="sw sw-rest"></i>休止</span>
+        <span class="legend-item"><i class="sw sw-click"></i>点击</span>
+        <span class="legend-item"><i class="sw sw-accent"></i>重音</span>
+        <span class="legend-tip">点行号选拍 · 点格子切三态</span>
+      </div>
+    </div>
+
+    <!-- 其他设置 -->
+    <div class="panel-grid">
+
+      <div class="field">
+        <div class="field-head"><span>外观</span><output id="themeOut">跟随系统</output></div>
+        <div class="seg" id="themeSeg" role="group" aria-label="主题">
+          <button type="button" data-theme="auto">跟随系统</button>
+          <button type="button" data-theme="light">浅色</button>
+          <button type="button" data-theme="dark">深色</button>
+        </div>
+      </div>
+
+      <div class="field">
+        <div class="field-head"><label for="volumeInput">音量</label><output id="volOut">80%</output></div>
+        <input id="volumeInput" class="range" type="range" min="0" max="100" step="1" value="80" aria-label="音量">
+      </div>
+
+      <div class="field">
+        <div class="field-head">
+          <label for="latencyInput">视听同步校准</label>
+          <output id="latOut">0 ms</output>
+        </div>
+        <input id="latencyInput" class="range" type="range" min="-300" max="300" step="5" value="0" aria-label="视听同步校准">
+        <p class="field-note">戴蓝牙耳机时，把光点调到与“听到”的咔哒声同时出现。</p>
+      </div>
+
+      <div class="field field-half">
+        <div class="field-head"><label for="soundSel">音色</label></div>
+        <select id="soundSel" class="select" aria-label="音色">
+          <option value="click">Click（电子）</option>
+          <option value="wood">Wood（木鱼）</option>
+          <option value="beep">Beep（柔和）</option>
+        </select>
+      </div>
+
+      <div class="field field-half">
+        <div class="field-head"><span id="awakeLabel">保持屏幕常亮</span></div>
+        <label class="switch">
+          <input id="awakeInput" type="checkbox" checked aria-labelledby="awakeLabel">
+          <span class="switch-track"><span class="switch-thumb"></span></span>
+        </label>
+      </div>
+
+      <div class="field field-half">
+        <div class="field-head"><span>音频引擎</span><output id="engineOut" class="mono">未启动</output></div>
+      </div>
+
+      <div class="field field-full">
+        <button id="resetBtn" class="pill-btn wide ghost" type="button">恢复默认</button>
+      </div>
+    </div>
+  </section>
+
+  <div id="flash" class="flash" aria-hidden="true"></div>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>

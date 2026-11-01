@@ -1,0 +1,19 @@
+{
+  "name": "metronome-android",
+  "version": "1.0.0",
+  "private": true,
+  "description": "节拍器 Android 外壳（Capacitor）。android/ 目录由 `npx cap add android` 生成，不入库。",
+  "scripts": {
+    "copy-web": "node -e \"const fs=require('fs');fs.rmSync('www',{recursive:true,force:true});fs.cpSync('../dist','www',{recursive:true})\"",
+    "add": "npx cap add android",
+    "sync": "npx cap sync android",
+    "build": "npm run copy-web && npx cap sync android && cd android && ./gradlew assembleDebug"
+  },
+  "dependencies": {
+    "@capacitor/core": "^6.2.0"
+  },
+  "devDependencies": {
+    "@capacitor/android": "^6.2.0",
+    "@capacitor/cli": "^6.2.0"
+  }
+}
